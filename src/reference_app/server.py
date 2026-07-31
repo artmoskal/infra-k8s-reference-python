@@ -65,7 +65,7 @@ def main() -> None:
 
 
 def reload_when_source_changes() -> None:
-    """Re-exec after Skaffold syncs Python source into the running image."""
+    """Re-exec after the bounded dev sync updates source in the running image."""
     baseline = source_signature()
     while True:
         time.sleep(0.25)

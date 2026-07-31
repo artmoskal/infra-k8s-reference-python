@@ -38,8 +38,8 @@ spec:
     artifacts:
       - artifact: web
         sync:
-          - source: src/reference_app/*.py
+          - source: src/reference_app
             destination: /app/reference_app
-          - source: config/*.json
+          - source: config
             destination: /app/config
         reload: native

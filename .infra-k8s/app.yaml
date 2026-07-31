@@ -1,0 +1,36 @@
+apiVersion: infra-k8s.artemm.io/v1alpha1
+kind: App
+metadata:
+  name: reference-python
+  namespace: reference-python
+spec:
+  artifacts:
+    - name: web
+      source:
+        sourceBuild:
+          context: .
+          recipe: Dockerfile
+  services:
+    - name: web
+      runtime:
+        container:
+          process:
+            artifact: web
+          replicas: 1
+          ports:
+            - name: http
+              servicePort: 80
+              containerPort: 8080
+          readiness:
+            kind: http
+            port: http
+            path: /health
+            initialDelaySeconds: 1
+            periodSeconds: 2
+  routes:
+    - name: frontend
+      service: web
+      port: http
+      expose: public
+      auth: none
+      mode: http

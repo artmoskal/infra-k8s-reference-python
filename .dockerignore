@@ -1,0 +1,8 @@
+.git
+.infra-k8s
+tests
+compose.yaml
+pyproject.toml
+README.md
+__pycache__
+*.pyc

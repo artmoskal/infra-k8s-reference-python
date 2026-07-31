@@ -34,3 +34,12 @@ spec:
       expose: public
       auth: none
       mode: http
+  development:
+    artifacts:
+      - artifact: web
+        sync:
+          - source: src/reference_app/**/*.py
+            destination: /app/reference_app
+          - source: config/*.json
+            destination: /app/config
+        reload: native

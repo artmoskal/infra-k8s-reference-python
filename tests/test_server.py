@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import tempfile
 import threading
 import unittest
 import urllib.error
@@ -10,6 +11,7 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from reference_app import server as reference_server  # noqa: E402
 from reference_app.server import Handler, response_for  # noqa: E402
 
 
@@ -26,6 +28,18 @@ class ResponseTest(unittest.TestCase):
 
     def test_unknown_path_is_not_a_false_health_success(self) -> None:
         self.assertEqual(response_for("/missing")[0], HTTPStatus.NOT_FOUND)
+
+    def test_project_owned_json_config_changes_the_live_response(self) -> None:
+        original = reference_server.MESSAGE_FILE
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = os.path.join(directory, "message.json")
+            with open(fixture, "w", encoding="utf-8") as output:
+                json.dump({"message": "changed-by-consumer"}, output)
+            reference_server.MESSAGE_FILE = reference_server.Path(fixture)
+            try:
+                self.assertEqual(response_for("/")[1]["message"], "changed-by-consumer")
+            finally:
+                reference_server.MESSAGE_FILE = original
 
 
 class HTTPTest(unittest.TestCase):

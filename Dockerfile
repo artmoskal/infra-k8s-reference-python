@@ -7,6 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 RUN addgroup -S app && adduser -S -G app app
 COPY --chown=app:app src/reference_app/ /app/reference_app/
+COPY --chown=app:app config/ /app/config/
+COPY --chown=app:app pyproject.toml /app/pyproject.toml
 USER app
 EXPOSE 8080
 CMD ["python", "-m", "reference_app.server"]

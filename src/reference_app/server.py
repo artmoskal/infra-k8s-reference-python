@@ -4,13 +4,28 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Final
 
 from reference_app import __version__
 
 SERVICE_NAME: Final = "reference-python"
+SOURCE_ROOT: Final = Path(__file__).resolve().parent
+MESSAGE_FILE: Final = Path("/app/config/message.json")
+
+
+def configured_message() -> str:
+    """Read the ordinary project-owned config synchronized in dev mode."""
+    try:
+        value = json.loads(MESSAGE_FILE.read_text()).get("message")
+    except (OSError, ValueError, AttributeError):
+        return "infra-k8s reference service"
+    return value if isinstance(value, str) and value else "infra-k8s reference service"
 
 
 def response_for(path: str) -> tuple[HTTPStatus, dict[str, str]]:
@@ -19,7 +34,7 @@ def response_for(path: str) -> tuple[HTTPStatus, dict[str, str]]:
         return HTTPStatus.OK, {
             "service": SERVICE_NAME,
             "version": __version__,
-            "message": "infra-k8s reference service",
+            "message": configured_message(),
         }
     if path == "/health":
         return HTTPStatus.OK, {"service": SERVICE_NAME, "status": "ok"}
@@ -43,9 +58,27 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    threading.Thread(target=reload_when_source_changes, daemon=True).start()
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     server.serve_forever()
+
+
+def reload_when_source_changes() -> None:
+    """Re-exec after Skaffold syncs Python source into the running image."""
+    baseline = source_signature()
+    while True:
+        time.sleep(0.25)
+        current = source_signature()
+        if current != baseline:
+            os.execv(sys.executable, [sys.executable, "-m", "reference_app.server"])
+
+
+def source_signature() -> tuple[tuple[str, int, int], ...]:
+    return tuple(
+        (str(path), path.stat().st_mtime_ns, path.stat().st_size)
+        for path in sorted(SOURCE_ROOT.glob("*.py"))
+    )
 
 
 if __name__ == "__main__":
